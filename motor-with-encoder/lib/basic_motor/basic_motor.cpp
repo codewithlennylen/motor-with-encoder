@@ -7,12 +7,12 @@
  */
 
 // Motor A connections
-const int enA = 10;
-const int in1 = 8;
-const int in2 = 9;
+const int enA = 53;
+const int in1 = 51;
+const int in2 = 49;
 
 // Set the speed (0 = off and 255 = max speed)
-const int motorSpeed = 180;
+const int motorSpeed = 230;
 
 void motor_setup()
 {
@@ -24,14 +24,15 @@ void motor_setup()
     pinMode(in1, OUTPUT);
     pinMode(in2, OUTPUT);
 
-    // Turn off motors - Initial state
-    digitalWrite(in1, LOW);
-    digitalWrite(in2, LOW);
+    // // Turn off motors - Initial state
+    // digitalWrite(in1, LOW);
+    // digitalWrite(in2, LOW);
 
-    // Set the motor speed
-    analogWrite(enA, motorSpeed);
+    // // Set the motor speed
+    // analogWrite(enA, motorSpeed);
 
-    Serial.println("Motor Initialized!");
+    // Serial.println("Motor Initialized!");
+    // stop_all();
 }
 
 /*
@@ -39,15 +40,17 @@ void motor_setup()
  */
 void go_forward()
 {
-    Serial.println("Going forwards!");
-    digitalWrite(in1, HIGH);
-    digitalWrite(in2, LOW);
+    // Serial.println("Going forwards!");
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, HIGH);
+    analogWrite(enA, motorSpeed);
 }
 void go_backwards()
 {
-    Serial.println("Going backwards!");
+    // Serial.println("Going backwards!");
     digitalWrite(in1, LOW);
-    digitalWrite(in2, HIGH);
+    digitalWrite(in2, LOW);
+    analogWrite(enA, motorSpeed);
 }
 void go_right()
 {
@@ -66,4 +69,5 @@ void stop_all()
     Serial.println("Stopping!");
     digitalWrite(in1, LOW);
     digitalWrite(in2, LOW);
+    analogWrite(enA, 0);
 }
