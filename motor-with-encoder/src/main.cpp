@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <motor_encoder.h>
+// #include <basic_encoder.h>
 // #include <motor_distance.h>
 
 // Define pins connected the encoders A & B
@@ -7,6 +8,9 @@
 #define RIGHT_ENCB 19 // Green
 #define LEFT_ENCA 2   // Yellow
 #define LEFT_ENCB 3   // Green
+
+// Motor Encoder Pulses per Rotation
+#define ENCODERPPR 66
 
 // Motor A connections
 int enA = 4;
@@ -19,9 +23,15 @@ int in3 = 10;
 int in4 = 11;
 
 // More motor variables
-int motorSpeed = 200;
+int motorSpeed = 160;
 int leftEncoderPosition = 0;
 int rightEncoderPosition = 0;
+
+// RPM-related variables
+int interval = 1000;
+long previousMillis = 0;
+long currentMillis = 0;
+int rpm = 0;
 
 // PID-related variables
 long prevT = 0;
@@ -32,6 +42,7 @@ float eintegral = 0;
 void readLeftEncoder();
 void readRightEncoder();
 void setMotor(int dir, int pwmPin, int pwmValue, int in1, int in2);
+int printRPM();
 
 void setup()
 {
@@ -54,18 +65,27 @@ void setup()
 
   attachInterrupt(digitalPinToInterrupt(LEFT_ENCA), readLeftEncoder, RISING);
   attachInterrupt(digitalPinToInterrupt(RIGHT_ENCA), readRightEncoder, RISING);
+
+  previousMillis = millis();
 }
 
 void loop()
 {
 
-  Serial.print("Left Encoder Position: ");
-  Serial.print(leftEncoderPosition);
-  Serial.print(" ");
-  Serial.print("Right Encoder Position: ");
-  Serial.print(rightEncoderPosition);
-  Serial.print(" ");
-  Serial.println();
+  setMotor(1, enB, motorSpeed, in3, in4);
+  printRPM();
+  // int leftRPM = printRPM();
+  // Serial.print("Left RPM: ");
+  // Serial.print(leftRPM);
+
+  // Serial.print(" ");
+  // Serial.print("Left Encoder Position: ");
+  // Serial.print(leftEncoderPosition);
+  // Serial.print("Right Encoder Position: ");
+  // Serial.print(rightEncoderPosition);
+  // Serial.print(" ");
+  // Serial.println();
+  // delay(200);
 
   // Serial.print("Left Motor Encoder: ");
   // readEncoderRaw(LEFT_ENCA, LEFT_ENCB);
@@ -189,13 +209,13 @@ void setMotor(int dir, int pwmPin, int pwmVal, int in1, int in2)
 {
   analogWrite(pwmPin, pwmVal);
 
-  if (dir == 1)
+  if (dir == -1)
   {
     // Serial.println("Forward");
     digitalWrite(in1, HIGH);
     digitalWrite(in2, LOW);
   }
-  else if (dir == -1)
+  else if (dir == 1)
   {
     // Serial.println("Backward");
     digitalWrite(in1, LOW);
@@ -206,5 +226,33 @@ void setMotor(int dir, int pwmPin, int pwmVal, int in1, int in2)
     // Serial.println("Stop");
     digitalWrite(in1, LOW);
     digitalWrite(in2, LOW);
+  }
+}
+
+int printRPM()
+{
+
+  // Update RPM value on every second
+  currentMillis = millis();
+  if (currentMillis - previousMillis > interval)
+  {
+    previousMillis = currentMillis;
+    // Revolutions per minute (RPM) =
+    // (total encoder pulse in 1s / motor encoder output) x 60s
+    rpm = (float)(abs(leftEncoderPosition) * 60 / ENCODERPPR);
+    rpm =fabs(rpm);
+
+    // Only update display when there have readings
+    // if (rpm > 0)
+    // {
+    // }
+    Serial.print(leftEncoderPosition);
+    Serial.print(" pulse / ");
+    Serial.print(ENCODERPPR);
+    Serial.print(" pulse per rotation x 60 seconds = ");
+    Serial.print(rpm);
+    Serial.println(" RPM");
+    leftEncoderPosition = 0;
+    return rpm;
   }
 }

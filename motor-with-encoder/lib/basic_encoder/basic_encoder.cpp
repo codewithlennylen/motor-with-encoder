@@ -8,7 +8,7 @@
 #include <Arduino.h>
 #define ENCODEROUTPUT 16
 
-const int HALLSEN_A = 3; // Hall sensor A connected to pin 3 (external interrupt)
+const int HALLSEN_A = 2; // Hall sensor A connected to pin 3 (external interrupt)
 const int MOTOR1A = 8;
 const int MOTOR1B = 9;
 
@@ -22,6 +22,8 @@ long currentMillis = 0;
 int rpm = 0;
 boolean measureRpm = false;
 int motorPwm = 0;
+
+void updateEncoder();
 
 void encoder_setup()
 {
