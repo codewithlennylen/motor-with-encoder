@@ -1,7 +1,5 @@
 #include <Arduino.h>
 #include <motor_encoder.h>
-// #include <basic_encoder.h>
-// #include <motor_distance.h>
 
 // Define pins connected the encoders A & B
 #define RIGHT_ENCA 18 // Yellow
@@ -23,9 +21,30 @@ int in3 = 10;
 int in4 = 11;
 
 // More motor variables
-int motorSpeed = 160;
+int motorSpeed = 220;
 int leftEncoderPosition = 0;
 int rightEncoderPosition = 0;
+
+// Distance-related variables
+#define PULSES_PER_REV 150     // this was measured manually before-hand
+#define RPM_TO_RADS 0.1047198; // 1 rpm  = 0.1047198 rad/s
+#define WHEEL_RADIUS 0.035     // radius of the wheel attached to the motor 0.035 m
+
+volatile long pulse_count = 0;
+bool direction = false; // true if motor is moving forward, false if motor is moving reverse
+
+/* Sampling interval 1 second */
+int sampling_interval = 1000;
+long current_millis = 0;
+long previous_millis = 0;
+
+/* velocity variables
+  we need angular velocity in radians, in degrees and the linear velocity
+*/
+float angular_velocity_in_rads = 0.0;
+float angular_velocity_in_degrees = 0.0;
+float linear_velocity = 0.0;
+float distance_cm = 0.0;
 
 // RPM-related variables
 int interval = 1000;
@@ -43,6 +62,7 @@ void readLeftEncoder();
 void readRightEncoder();
 void setMotor(int dir, int pwmPin, int pwmValue, int in1, int in2);
 int printRPM();
+int getDistance(int encoderPosition);
 
 void setup()
 {
@@ -72,108 +92,72 @@ void setup()
 void loop()
 {
 
+  setMotor(1, enA, motorSpeed, in1, in2);
   setMotor(1, enB, motorSpeed, in3, in4);
-  printRPM();
-  // int leftRPM = printRPM();
-  // Serial.print("Left RPM: ");
-  // Serial.print(leftRPM);
-
-  // Serial.print(" ");
-  // Serial.print("Left Encoder Position: ");
-  // Serial.print(leftEncoderPosition);
-  // Serial.print("Right Encoder Position: ");
-  // Serial.print(rightEncoderPosition);
-  // Serial.print(" ");
-  // Serial.println();
-  // delay(200);
-
-  // Serial.print("Left Motor Encoder: ");
-  // readEncoderRaw(LEFT_ENCA, LEFT_ENCB);
-  // Serial.print(" Right Motor Encoder: ");
-  // readEncoderRaw(RIGHT_ENCA, RIGHT_ENCB);
-  // Serial.println();
 
   // ------------ MOTOR CONTROLLER (PID Loop) ----------------------
 
-  // // set target position
-  // int target = 1200;
-  // // int target = 250*sin(prevT/1e6)
 
-  // // PID Constants
-  // float kp = 1;
-  // float ki = 0;
-  // float kd = 0.025;
+  int leftDistance = getDistance(leftEncoderPosition);
+  int rightDistance = getDistance(rightEncoderPosition);
 
-  // // compute time difference
-  // long currT = micros();
+  // PID Constants
+  float kp = 1;
+  float ki = 0;
+  float kd = 0.025;
 
-  // float deltaT = ((float)(currT - prevT)) / 1e6; // deltaT in seconds
-  // prevT = currT;
+  // compute time difference
+  long currT = micros();
 
-  // // calculate error
-  // // int e = target - encoderPosition;
-  // int e = encoderPosition - target;
+  float deltaT = ((float)(currT - prevT)) / 1e6; // deltaT in seconds
+  prevT = currT;
 
-  // // derivative
-  // float dedt = (e - eprev) / (deltaT);
+  // calculate error
+  // int e = target - encoderPosition;
+  int e = leftDistance - rightDistance;
 
-  // // integral
-  // eintegral = eintegral + e * deltaT;
+  // derivative
+  float dedt = (e - eprev) / (deltaT);
 
-  // // calculate control signal
-  // float u = kp * e + ki * eintegral + kd * dedt;
+  // integral
+  eintegral = eintegral + e * deltaT;
 
-  // // set motor power
-  // float pwr = fabs(u);
-  // if (pwr > 255)
-  // {
-  //   pwr = 255;
-  // }
+  // calculate control signal
+  float u = kp * e + ki * eintegral + kd * dedt;
 
-  // // set motor direction
-  // int dir = 1;
-  // if (u < 0)
-  // {
-  //   dir = -1;
-  // }
+  // set motor power
+  float pwr = fabs(u);
+  if (pwr > 255)
+  {
+    pwr = 255;
+  }
 
-  // // signal the motor (Drive the motor)
-  // // setMotor(dir, enA, pwr, in1, in2);
+  // Determine motor
+  if (u < 0)
+  {
+    setMotor(1, enA, pwr, in1, in2);
+  }
+  else
+  {
+    setMotor(1, enB, pwr, in3, in4);
+  }
 
-  // // store previous error
-  // eprev = e;
+  // store previous error
+  eprev = e;
 
-  // Serial.print("Target Position: ");
-  // Serial.print(target);
-  // Serial.print(" ");
-  // Serial.print("Measured Position: ");
-  // Serial.print(encoderPosition);
-  // Serial.print(" ");
-  // Serial.print("Error: ");
-  // Serial.print(e);
-  // Serial.print(" ");
-  // Serial.print("Control Signal: ");
-  // Serial.print(u);
-  // Serial.print(" ");
-  // Serial.println();
 
-  // int b = digitalRead(ENCB);
-
-  //   if (b > 0)
-  //   {
-  //       encoderPosition++;
-  //   }
-  //   else
-  //   {
-  //       encoderPosition--;
-  //   }
-
-  // float distance = (encoderPosition / 65) * 0.065 * PI;
-
-  // Serial.print(distance * 1000); // distance in mm
-  // Serial.print(" ");
-  // Serial.println();
-  // getDistance();
+  Serial.print("Left Distance: ");
+  Serial.print(leftDistance);
+  Serial.print(" Right Distance: ");
+  Serial.print(rightDistance);
+  Serial.print(" ");
+  Serial.print("Error: ");
+  Serial.print(e);
+  Serial.print(" ");
+  Serial.print("Control Signal: ");
+  Serial.print(u);
+  Serial.print(" ");
+  Serial.println();
 }
 
 void readLeftEncoder()
@@ -240,7 +224,7 @@ int printRPM()
     // Revolutions per minute (RPM) =
     // (total encoder pulse in 1s / motor encoder output) x 60s
     rpm = (float)(abs(leftEncoderPosition) * 60 / ENCODERPPR);
-    rpm =fabs(rpm);
+    rpm = fabs(rpm);
 
     // Only update display when there have readings
     // if (rpm > 0)
@@ -254,5 +238,55 @@ int printRPM()
     Serial.println(" RPM");
     leftEncoderPosition = 0;
     return rpm;
+  }
+}
+
+int getDistance(int encoderPosition)
+{
+
+  // get the elapsed time
+  current_millis = millis();
+
+  // Take a sample
+  if ((current_millis - previous_millis) > sampling_interval)
+  {
+    /* code */
+
+    /* update the current time for the next iteration */
+    previous_millis = current_millis;
+
+    /* calculate Revs per minute */
+    float revs_per_minute = (float)((encoderPosition * 60) / PULSES_PER_REV);
+
+    /* calculate angular velocity in rad/s of the wheel in radians */
+    angular_velocity_in_rads = revs_per_minute * RPM_TO_RADS;
+
+    /* calculate angular velocity in degrees */
+    angular_velocity_in_degrees = angular_velocity_in_rads * RAD_TO_DEG; // 1 rad = 57.2958 deg, inbuilt
+
+    /* Calculate the linear velocity (m/s): linear velocity = radius x angular velocity  */
+    linear_velocity = angular_velocity_in_rads * WHEEL_RADIUS;
+
+    /* calculate the distance travelled (centimeters): distance = speed * time */
+    if (direction == false)
+    {
+      /* motor moving reverse - decrement distance - linear velocity is negative here */
+      distance_cm = distance_cm + (linear_velocity * (sampling_interval / 1000)) * 100;
+    }
+    else if (direction == true)
+    {
+      /* motor moving forward -> increment distance */
+      distance_cm = distance_cm + (linear_velocity * (sampling_interval / 1000)) * 100;
+    }
+
+    /* debug on the serial monitor */
+    // debug("Angular velocity: "); debugln(angular_velocity_in_rads);
+    // debug("Linear velocity: "); debugln(linear_velocity);
+    // Serial.print("Distance travelled (cm): ");
+    // Serial.println(distance_cm);
+    return distance_cm;
+
+    /* reset the pulse count */
+    encoderPosition = 0;
   }
 }
