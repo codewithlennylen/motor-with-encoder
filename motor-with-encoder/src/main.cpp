@@ -18,15 +18,19 @@ int enB = 5;
 int in3 = 10;
 int in4 = 11;
 
+// More motor variables
 int motorSpeed = 200;
+int leftEncoderPosition = 0;
+int rightEncoderPosition = 0;
 
 // PID-related variables
-int encoderPosition = 0;
 long prevT = 0;
 float eprev = 0;
 float eintegral = 0;
 
-// void readEncoder();
+// Function prototypes
+void readLeftEncoder();
+void readRightEncoder();
 void setMotor(int dir, int pwmPin, int pwmValue, int in1, int in2);
 
 void setup()
@@ -48,17 +52,26 @@ void setup()
   pinMode(in3, OUTPUT);
   pinMode(in4, OUTPUT);
 
-  // attachInterrupt(digitalPinToInterrupt(ENCA), readEncoder, RISING);
+  attachInterrupt(digitalPinToInterrupt(LEFT_ENCA), readLeftEncoder, RISING);
+  attachInterrupt(digitalPinToInterrupt(RIGHT_ENCA), readRightEncoder, RISING);
 }
 
 void loop()
 {
 
+  Serial.print("Left Encoder Position: ");
+  Serial.print(leftEncoderPosition);
+  Serial.print(" ");
+  Serial.print("Right Encoder Position: ");
+  Serial.print(rightEncoderPosition);
+  Serial.print(" ");
+  Serial.println();
+
   // Serial.print("Left Motor Encoder: ");
   // readEncoderRaw(LEFT_ENCA, LEFT_ENCB);
-  Serial.print(" Right Motor Encoder: ");
-  readEncoderRaw(RIGHT_ENCA, RIGHT_ENCB);
-  Serial.println();
+  // Serial.print(" Right Motor Encoder: ");
+  // readEncoderRaw(RIGHT_ENCA, RIGHT_ENCB);
+  // Serial.println();
 
   // ------------ MOTOR CONTROLLER (PID Loop) ----------------------
 
@@ -143,19 +156,34 @@ void loop()
   // getDistance();
 }
 
-// void readEncoder()
-// {
-//   int b = digitalRead(ENCB);
+void readLeftEncoder()
+{
+  int b = digitalRead(LEFT_ENCB);
 
-//   if (b > 0)
-//   {
-//     encoderPosition++;
-//   }
-//   else
-//   {
-//     encoderPosition--;
-//   }
-// }
+  //? WARNING: left motor is inverted (mirror image of right motor)
+  if (b > 0)
+  {
+    leftEncoderPosition--;
+  }
+  else
+  {
+    leftEncoderPosition++;
+  }
+}
+
+void readRightEncoder()
+{
+  int b = digitalRead(RIGHT_ENCB);
+
+  if (b > 0)
+  {
+    rightEncoderPosition++;
+  }
+  else
+  {
+    rightEncoderPosition--;
+  }
+}
 
 void setMotor(int dir, int pwmPin, int pwmVal, int in1, int in2)
 {
